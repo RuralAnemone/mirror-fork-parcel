@@ -1,27 +1,16 @@
 package dev.itsvic.parceltracker.api
 
-import android.os.LocaleList
-import android.text.Html
-import android.util.Log
-import com.squareup.moshi.JsonClass
 import dev.itsvic.parceltracker.R
-import dev.itsvic.parceltracker.misc.defaultRegionsForLanguageCode
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.coroutines.executeAsync
-import retrofit2.HttpException
-import retrofit2.Retrofit
-import retrofit2.http.Body
-import retrofit2.http.Header
-import retrofit2.http.Headers
-import retrofit2.http.POST
-import retrofit2.http.Query
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import android.util.Log
+import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
+import org.json.JSONObject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 object USPSDeliveryService : DeliveryService {
     override val nameResource: Int = R.string.service_usps
@@ -29,11 +18,37 @@ object USPSDeliveryService : DeliveryService {
     override val requiresPostCode: Boolean = false
 
     override suspend fun getParcel(trackingId: String, postCode: String?): Parcel {
-        /*return Parcel(
+        return Parcel(
             trackingId,
-            history,
-            status,
-            metadata
-        )*/
+            "history",
+            "status",
+            "metadata"
+        )
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private suspend fun getOauthToken(clientId: String, clientSecret: String): String {
+        val GRANT_TYPE = "authorization_code"
+        val TOKEN_URL = "https://apis.usps.com/oauth2/v3/token"
+
+        // this should work trust me
+        val body = """{
+            |"grant_type": "$GRANT_TYPE",
+            |"client_id": "$clientId",
+            |"client_secret": "$clientSecret"}""".trimMargin()
+                .toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder().post(body).url(TOKEN_URL).build()
+
+        api_client.newCall(request).executeAsync().use { response ->
+            Log.d("USPS", "Got Response")
+            var jsonWebToken = ""
+            if (response.code == 200) {
+                jsonWebToken = JSONObject(response.body.string()).optString("access_token", "")
+                // TODO: verify access token with provided public key
+                // if the USPS gets hacked we may have bigger problems on our hands than inaccurate package tracking
+            }
+            return jsonWebToken
+        }
     }
 }
