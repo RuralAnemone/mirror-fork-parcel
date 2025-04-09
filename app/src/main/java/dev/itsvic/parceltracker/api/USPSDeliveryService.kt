@@ -28,6 +28,7 @@ object USPSDeliveryService : DeliveryService {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun getOauthToken(clientId: String, clientSecret: String): String {
+        // this is all coming from https://developers.usps.com/Oauth
         val GRANT_TYPE = "authorization_code"
         val TOKEN_URL = "https://apis.usps.com/oauth2/v3/token"
 
@@ -45,9 +46,10 @@ object USPSDeliveryService : DeliveryService {
             var jsonWebToken = ""
             if (response.code == 200) {
                 jsonWebToken = JSONObject(response.body.string()).optString("access_token", "")
+                Log.d("USPS", "Got Oauth2 token! $jsonWebToken")
                 // TODO: verify access token with provided public key
                 // if the USPS gets hacked we may have bigger problems on our hands than inaccurate package tracking
-            }
+            } else Log.d("USPS", "Couldn't get Oauth2 token ):")
             return jsonWebToken
         }
     }
